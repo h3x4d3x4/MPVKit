@@ -61,7 +61,7 @@ new file mode 100644
 index 0000000000000000000000000000000000000000..445b907f795b24b8df80389394d4ae7b3f94c6e5
 --- /dev/null
 +++ forkDstPrefix/video/out/vulkan/context_moltenvk.m
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,122 @@
 +/*
 + * This file is part of mpv.
 + *
@@ -133,6 +133,11 @@ index 0000000000000000000000000000000000000000..445b907f795b24b8df80389394d4ae7b
 +    if (!ra_vk_ctx_init(ctx, vk, params, VK_PRESENT_MODE_FIFO_KHR))
 +        goto fail;
 +
++    // Cache initial drawable size to avoid spurious resize on first CHECK_EVENTS
++    CGSize initSize = p->layer.drawableSize;
++    p->last_w = initSize.width;
++    p->last_h = initSize.height;
++
 +    return true;
 +fail:
 +    moltenvk_uninit(ctx);
@@ -163,6 +168,10 @@ index 0000000000000000000000000000000000000000..445b907f795b24b8df80389394d4ae7b
 +        }
 +        return VO_TRUE;
 +    }
++    case VOCTRL_SET_PANSCAN:
++        // Aspect ratio / panscan changes need a resize recalculation
++        *events |= VO_EVENT_RESIZE;
++        return VO_TRUE;
 +    }
 +    return VO_NOTIMPL;
 +}
