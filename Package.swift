@@ -7,52 +7,11 @@ let package = Package(
     platforms: [.macOS(.v11), .iOS(.v14), .tvOS(.v14)],
     products: [
         .library(
-            name: "MPVKit",
-            targets: ["_MPVKit"]
-        ),
-        .library(
             name: "MPVKit-GPL",
             targets: ["_MPVKit-GPL"]
         ),
     ],
     targets: [
-        .target(
-            name: "_MPVKit",
-            dependencies: [
-                "Libmpv", "_FFmpeg", "Libuchardet", "Libbluray",
-                .target(name: "Libluajit", condition: .when(platforms: [.macOS])),
-            ],
-            path: "Sources/_MPVKit",
-            linkerSettings: [
-                .linkedFramework("AVFoundation"),
-                .linkedFramework("CoreAudio"),
-            ]
-        ),
-        .target(
-            name: "_FFmpeg",
-            dependencies: [
-                "Libavcodec", "Libavdevice", "Libavfilter", "Libavformat", "Libavutil", "Libswresample", "Libswscale",
-                "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz",
-                "MoltenVK", "Libshaderc_combined", "lcms2", "Libplacebo", "Libdovi", "Libunibreak",
-                "gmp", "nettle", "hogweed", "gnutls", "Libdav1d", "Libuavs3d"
-            ],
-            path: "Sources/_FFmpeg",
-            linkerSettings: [
-                .linkedFramework("AudioToolbox"),
-                .linkedFramework("CoreVideo"),
-                .linkedFramework("CoreFoundation"),
-                .linkedFramework("CoreMedia"),
-                .linkedFramework("Metal"),
-                .linkedFramework("VideoToolbox"),
-                .linkedLibrary("bz2"),
-                .linkedLibrary("iconv"),
-                .linkedLibrary("expat"),
-                .linkedLibrary("resolv"),
-                .linkedLibrary("xml2"),
-                .linkedLibrary("z"),
-                .linkedLibrary("c++"),
-            ]
-        ),
         .target(
             name: "_MPVKit-GPL",
             dependencies: [
@@ -131,7 +90,6 @@ let package = Package(
             url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libswscale.xcframework.zip",
             checksum: "3b9a1b8aa6a8a320d3af9f86ad97aff9033724ae50c0c534306463e1dc86e8fb"
         ),
-        //AUTO_GENERATE_TARGETS_BEGIN//
 
         .binaryTarget(
             name: "Libcrypto",
@@ -252,42 +210,6 @@ let package = Package(
         ),
 
         .binaryTarget(
-            name: "Libavcodec",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libavcodec.xcframework.zip",
-            checksum: "35ac93b6d6619512fdf487a66c93814a8a4e956f874b940f185e644157fe5cc2"
-        ),
-        .binaryTarget(
-            name: "Libavdevice",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libavdevice.xcframework.zip",
-            checksum: "951c7ed0c6c438823fe1786cec0021a881c3003d075e0038009ea307f993f810"
-        ),
-        .binaryTarget(
-            name: "Libavformat",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libavformat.xcframework.zip",
-            checksum: "6f3aa72edc41a7761dc3d4b8103c435f4e7a1ae88cc52511c0afcc23977e275e"
-        ),
-        .binaryTarget(
-            name: "Libavfilter",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libavfilter.xcframework.zip",
-            checksum: "5ef080d1a775c8329fb7ef68acccfa6229d4e1e043709978c1778890545a788d"
-        ),
-        .binaryTarget(
-            name: "Libavutil",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libavutil.xcframework.zip",
-            checksum: "db0cc6e3b654b78e2e48a175c8137d9aca614fa8709c78978611bcd8edba4237"
-        ),
-        .binaryTarget(
-            name: "Libswresample",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libswresample.xcframework.zip",
-            checksum: "09297a267c7c7edeb1e84238295e854d40f4fe2b983199a137ca716c94063fb3"
-        ),
-        .binaryTarget(
-            name: "Libswscale",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libswscale.xcframework.zip",
-            checksum: "3b9a1b8aa6a8a320d3af9f86ad97aff9033724ae50c0c534306463e1dc86e8fb"
-        ),
-
-        .binaryTarget(
             name: "Libuchardet",
             url: "https://github.com/mpvkit/libuchardet-build/releases/download/0.0.8-xcode/Libuchardet.xcframework.zip",
             checksum: "503202caa0dafb6996b2443f53408a713b49f6c2d4a26d7856fd6143513a50d7"
@@ -298,12 +220,5 @@ let package = Package(
             url: "https://github.com/mpvkit/libluajit-build/releases/download/2.1.0-xcode/Libluajit.xcframework.zip",
             checksum: "8e76f267ee100ff5f3bbde7641b2240566df722241cdf8e135be7ef3d29e237a"
         ),
-
-        .binaryTarget(
-            name: "Libmpv",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched2/Libmpv.xcframework.zip",
-            checksum: "d6fb0ca768c6372244e277643a7cb23a7abf65f513c8679d88a0929e115ff43a"
-        ),
-        //AUTO_GENERATE_TARGETS_END//
     ]
 )
