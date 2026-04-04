@@ -396,6 +396,7 @@ private class BuildMPV: BaseBuild {
             "-Djpeg=disabled",
             "-Dvapoursynth=disabled",
             "-Drubberband=disabled",
+            "-Ddvdnav=disabled",
         ]
         if BaseBuild.options.enableGPL {
             array.append("-Dgpl=true")
