@@ -52,8 +52,8 @@ let package = Package(
 
         .binaryTarget(
             name: "Libmpv-GPL",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched2/Libmpv-GPL.xcframework.zip",
-            checksum: "626b399ab66d54d63928e6c8afc63c9694dae4a9b247fffe3d7ba521ce77a453"
+            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched4/Libmpv-GPL.xcframework.zip",
+            checksum: "8ddc2fdd9b39492fbe11da269dafe578a54328e775bc33d2bd54886b323c7e4c"
         ),
         .binaryTarget(
             name: "Libavcodec-GPL",
