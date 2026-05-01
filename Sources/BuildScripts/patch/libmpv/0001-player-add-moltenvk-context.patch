@@ -61,7 +61,7 @@ new file mode 100644
 index 0000000000000000000000000000000000000000..445b907f795b24b8df80389394d4ae7b3f94c6e5
 --- /dev/null
 +++ forkDstPrefix/video/out/vulkan/context_moltenvk.m
-@@ -0,0 +1,122 @@
+@@ -0,0 +1,219 @@
 +/*
 + * This file is part of mpv.
 + *
@@ -87,9 +87,36 @@ index 0000000000000000000000000000000000000000..445b907f795b24b8df80389394d4ae7b
 +#include "context.h"
 +#include "utils.h"
 +
++// KVO observer that wakes the VO render thread whenever the layer's
++// drawableSize property changes. CAMetalLayer's drawableSize is normally
++// driven by UIKit/AppKit on the main thread (e.g. on rotation, fullscreen
++// toggle, splitview drag), and on iOS the render thread can sit idle for
++// long enough that the next VOCTRL_CHECK_EVENTS poll arrives only after
++// the user has already noticed the misalignment. Calling vo_wakeup() the
++// instant the size is committed makes the resize path land within one
++// frame instead of waiting for the next opportunistic poll.
++@interface MPVulkanLayerObserver : NSObject {
++    @public struct vo *_vo;
++    @public CAMetalLayer *_layer;
++    @public BOOL _registered;
++}
++@end
++
++@implementation MPVulkanLayerObserver
++- (void)observeValueForKeyPath:(NSString *)keyPath
++                      ofObject:(id)object
++                        change:(NSDictionary<NSKeyValueChangeKey, id> *)change
++                       context:(void *)context
++{
++    if (_vo)
++        vo_wakeup(_vo);
++}
++@end
++
 +struct priv {
 +    struct mpvk_ctx vk;
 +    CAMetalLayer *layer;
++    MPVulkanLayerObserver *observer;
 +    CGFloat last_w;
 +    CGFloat last_h;
 +};
@@ -97,6 +124,16 @@ index 0000000000000000000000000000000000000000..445b907f795b24b8df80389394d4ae7b
 +static void moltenvk_uninit(struct ra_ctx *ctx)
 +{
 +    struct priv *p = ctx->priv;
++    if (p->observer && p->observer->_registered) {
++        @try {
++            [p->layer removeObserver:p->observer forKeyPath:@"drawableSize"];
++        } @catch (NSException *e) {
++            // Already removed or never registered — best-effort cleanup.
++        }
++        p->observer->_registered = NO;
++    }
++    p->observer = nil;
++    p->layer = nil;
 +    ra_vk_ctx_uninit(ctx);
 +    mpvk_uninit(&p->vk);
 +}
@@ -137,6 +174,30 @@ index 0000000000000000000000000000000000000000..445b907f795b24b8df80389394d4ae7b
 +    CGSize initSize = p->layer.drawableSize;
 +    p->last_w = initSize.width;
 +    p->last_h = initSize.height;
++    ctx->vo->dwidth = (int)initSize.width;
++    ctx->vo->dheight = (int)initSize.height;
++
++    // Register a KVO observer on drawableSize so we wake mpv up the moment
++    // the layer is resized — without this, the resize is only seen on the
++    // next opportunistic VOCTRL_CHECK_EVENTS poll (which on iOS may not
++    // arrive until well after the rotation/fullscreen animation has settled).
++    p->observer = [[MPVulkanLayerObserver alloc] init];
++    p->observer->_vo = ctx->vo;
++    p->observer->_layer = p->layer;
++    @try {
++        [p->layer addObserver:p->observer
++                   forKeyPath:@"drawableSize"
++                      options:NSKeyValueObservingOptionNew
++                      context:NULL];
++        p->observer->_registered = YES;
++    } @catch (NSException *e) {
++        MP_WARN(ctx, "Failed to register drawableSize observer: %s\n",
++                e.reason.UTF8String ?: "unknown");
++        p->observer = nil;
++    }
++
++    MP_VERBOSE(ctx, "moltenvk init: drawable=%dx%d\n",
++               (int)initSize.width, (int)initSize.height);
 +
 +    return true;
 +fail:
@@ -144,11 +205,36 @@ index 0000000000000000000000000000000000000000..445b907f795b24b8df80389394d4ae7b
 +    return false;
 +}
 +
++// Apply a swapchain resize and propagate the new dimensions into vo->dwidth /
++// vo->dheight so mpv's gpu-next vo recomputes its render rects on the next
++// VO_EVENT_RESIZE handling pass. ra_vk_ctx_resize already writes to
++// vo->dwidth/dheight internally, but we re-assert them here defensively in
++// case pl_swapchain_resize on MoltenVK returns success without clamping the
++// size to the actual surface extent (observed on iOS when CAMetalLayer's
++// drawableSize is mutated mid-frame).
++static void apply_resize(struct ra_ctx *ctx, CGSize s)
++{
++    int w = (int)s.width;
++    int h = (int)s.height;
++    if (w <= 0 || h <= 0)
++        return;
++
++    ra_vk_ctx_resize(ctx, w, h);
++
++    // Defensive: ensure vo->dwidth/dheight match the layer's current pixel
++    // size. vo_get_src_dst_rects() reads these to compute the render
++    // viewport — if they're stale, the rendered region stays at the old
++    // size in the top-left of the new (larger) drawable.
++    ctx->vo->dwidth = w;
++    ctx->vo->dheight = h;
++
++    MP_VERBOSE(ctx, "moltenvk resize: %dx%d\n", w, h);
++}
++
 +static bool moltenvk_reconfig(struct ra_ctx *ctx)
 +{
 +    struct priv *p = ctx->priv;
-+    CGSize s = p->layer.drawableSize;
-+    ra_vk_ctx_resize(ctx, s.width, s.height);
++    apply_resize(ctx, p->layer.drawableSize);
 +    return true;
 +}
 +
@@ -157,14 +243,25 @@ index 0000000000000000000000000000000000000000..445b907f795b24b8df80389394d4ae7b
 +    struct priv *p = ctx->priv;
 +    switch (request) {
 +    case VOCTRL_CHECK_EVENTS: {
-+        // Detect CAMetalLayer size changes (window resize, fullscreen).
-+        // Fire VO_EVENT_RESIZE so mpv recalculates the rendering viewport.
++        // Detect CAMetalLayer size changes (window resize, fullscreen,
++        // rotation). On iOS this is the primary mechanism for plumbing a
++        // drawableSize update through to mpv's render viewport — UIKit
++        // mutates the layer on the main thread and the KVO observer in
++        // moltenvk_init() wakes the VO render loop, which then arrives
++        // here and applies the resize.
 +        CGSize s = p->layer.drawableSize;
 +        if (s.width != p->last_w || s.height != p->last_h) {
 +            p->last_w = s.width;
 +            p->last_h = s.height;
-+            ra_vk_ctx_resize(ctx, s.width, s.height);
-+            *events |= VO_EVENT_RESIZE;
++            apply_resize(ctx, s);
++            // VO_EVENT_RESIZE makes vo_gpu_next.c::control call resize(vo)
++            // which recomputes p->src/p->dst from the now-updated
++            // vo->dwidth/dheight. VO_EVENT_EXPOSE forces a redraw so the
++            // freshly-rendered frame lands on screen without waiting for
++            // the next decoded video frame (important when playback is
++            // paused at the moment of resize).
++            *events |= VO_EVENT_RESIZE | VO_EVENT_EXPOSE;
++            ctx->vo->want_redraw = true;
 +        }
 +        return VO_TRUE;
 +    }
