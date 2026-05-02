@@ -203,10 +203,16 @@ let package = Package(
             checksum: "dc0dce0606f6ab6841a8ec5a6bd4448e2f3ef00661a050460f806c9393dc6982"
         ),
 
+        // Libplacebo: switched from h3x4d3x4/MPVKit/0.41.0-patched (macOS-only) to
+        // mpvkit/libplacebo-build/7.360.1 (full xcframework: ios-arm64, ios simulator,
+        // macos, maccatalyst, tvos, xros). The fork's libmpv + FFmpeg artifacts at
+        // 0.41.0-lgpl1 are linked against libplacebo 7.360 (export _pl_log_create_360),
+        // and this upstream xcframework provides the matching ABI on every slice.
+        // Required so the iOS Libmpv-LGPL slice can actually link against libplacebo.
         .binaryTarget(
             name: "Libplacebo",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libplacebo.xcframework.zip",
-            checksum: "111dfb856c4d216911e67970c7880ff5d11a3a6c87bf14a96a8c86fe0fc5fc16"
+            url: "https://github.com/mpvkit/libplacebo-build/releases/download/7.360.1/Libplacebo.xcframework.zip",
+            checksum: "2fa3d54cb81f302d6f11c7b2f509af30944381c3b11ee9d35096eb4637a6e2dd"
         ),
 
         .binaryTarget(
