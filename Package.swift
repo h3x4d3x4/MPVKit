@@ -2,20 +2,26 @@
 
 import PackageDescription
 
+// LGPL build of MPVKit (FFmpeg + libmpv compiled without --enable-gpl --enable-nonfree).
+// Suitable for App Store distribution. Tag: 0.41.0-lgpl1.
 let package = Package(
     name: "MPVKit",
     platforms: [.macOS(.v11), .iOS(.v14), .tvOS(.v14)],
     products: [
         .library(
-            name: "MPVKit-GPL",
-            targets: ["_MPVKit-GPL"]
+            name: "MPVKit-LGPL",
+            targets: ["_MPVKit-LGPL"]
+        ),
+        .library(
+            name: "Libmpv-LGPL",
+            targets: ["Libmpv-LGPL"]
         ),
     ],
     targets: [
         .target(
-            name: "_MPVKit-GPL",
+            name: "_MPVKit-LGPL",
             dependencies: [
-                "Libmpv-GPL", "_FFmpeg-GPL", "Libuchardet", "Libbluray",
+                "Libmpv-LGPL", "_FFmpeg-LGPL", "Libuchardet", "Libbluray",
                 .target(name: "Libluajit", condition: .when(platforms: [.macOS])),
             ],
             path: "Sources/_MPVKit-GPL",
@@ -25,9 +31,9 @@ let package = Package(
             ]
         ),
         .target(
-            name: "_FFmpeg-GPL",
+            name: "_FFmpeg-LGPL",
             dependencies: [
-                "Libavcodec-GPL", "Libavdevice-GPL", "Libavfilter-GPL", "Libavformat-GPL", "Libavutil-GPL", "Libswresample-GPL", "Libswscale-GPL",
+                "Libavcodec-LGPL", "Libavdevice-LGPL", "Libavfilter-LGPL", "Libavformat-LGPL", "Libavutil-LGPL", "Libswresample-LGPL", "Libswscale-LGPL",
                 "Libssl", "Libcrypto", "Libass", "Libfreetype", "Libfribidi", "Libharfbuzz",
                 "MoltenVK", "Libshaderc_combined", "lcms2", "Libplacebo", "Libdovi", "Libunibreak",
                 "Libsmbclient", "gmp", "nettle", "hogweed", "gnutls", "Libdav1d", "Libuavs3d"
@@ -51,44 +57,44 @@ let package = Package(
         ),
 
         .binaryTarget(
-            name: "Libmpv-GPL",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched5/Libmpv-GPL.xcframework.zip",
-            checksum: "bfa3c98a4e6c30503329ad9a4ab348f33d7990e12c1b37190a0ba58a85158c26"
+            name: "Libmpv-LGPL",
+            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-lgpl1/Libmpv-ios.xcframework.zip",
+            checksum: "52d4382cb251817ee0c3d792a9ff88dd4a077452fb592565fd7e0e51c5572b22"
         ),
         .binaryTarget(
-            name: "Libavcodec-GPL",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libavcodec.xcframework.zip",
-            checksum: "35ac93b6d6619512fdf487a66c93814a8a4e956f874b940f185e644157fe5cc2"
+            name: "Libavcodec-LGPL",
+            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-lgpl1/Libavcodec-ios.xcframework.zip",
+            checksum: "78813a89900d60652ddd6fc5b47fd41e42646c66e182b1d601579062c58ba201"
         ),
         .binaryTarget(
-            name: "Libavdevice-GPL",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libavdevice.xcframework.zip",
-            checksum: "951c7ed0c6c438823fe1786cec0021a881c3003d075e0038009ea307f993f810"
+            name: "Libavdevice-LGPL",
+            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-lgpl1/Libavdevice-ios.xcframework.zip",
+            checksum: "781bb426bded652d6880fd26738b8697a8dad5498766f71ffc088052d7e2f582"
         ),
         .binaryTarget(
-            name: "Libavformat-GPL",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libavformat.xcframework.zip",
-            checksum: "6f3aa72edc41a7761dc3d4b8103c435f4e7a1ae88cc52511c0afcc23977e275e"
+            name: "Libavformat-LGPL",
+            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-lgpl1/Libavformat-ios.xcframework.zip",
+            checksum: "2cbc5bb247a79505cb91f6da49e7b08abf80e4c5711b7c5fb2d41fcfc87eadeb"
         ),
         .binaryTarget(
-            name: "Libavfilter-GPL",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libavfilter.xcframework.zip",
-            checksum: "5ef080d1a775c8329fb7ef68acccfa6229d4e1e043709978c1778890545a788d"
+            name: "Libavfilter-LGPL",
+            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-lgpl1/Libavfilter-ios.xcframework.zip",
+            checksum: "4a375de1ad74b1ac492e342dc8d9c3d302a440d3dbb7c4d1ef165370f0a021ef"
         ),
         .binaryTarget(
-            name: "Libavutil-GPL",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libavutil.xcframework.zip",
-            checksum: "db0cc6e3b654b78e2e48a175c8137d9aca614fa8709c78978611bcd8edba4237"
+            name: "Libavutil-LGPL",
+            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-lgpl1/Libavutil-ios.xcframework.zip",
+            checksum: "831f810975c46a5d44dc13518084b186b03abbea9ba7b5980be23bc0dab3fd50"
         ),
         .binaryTarget(
-            name: "Libswresample-GPL",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libswresample.xcframework.zip",
-            checksum: "09297a267c7c7edeb1e84238295e854d40f4fe2b983199a137ca716c94063fb3"
+            name: "Libswresample-LGPL",
+            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-lgpl1/Libswresample-ios.xcframework.zip",
+            checksum: "8e4ea30a3267dfc3733c8cd19c145beffef9c008bfcfcee0867d66593d40056a"
         ),
         .binaryTarget(
-            name: "Libswscale-GPL",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-patched/Libswscale.xcframework.zip",
-            checksum: "3b9a1b8aa6a8a320d3af9f86ad97aff9033724ae50c0c534306463e1dc86e8fb"
+            name: "Libswscale-LGPL",
+            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-lgpl1/Libswscale-ios.xcframework.zip",
+            checksum: "68a17d12520e12ac74ed411e580910d55385a4bc9661ce8bb58a363c12e3455f"
         ),
 
         .binaryTarget(
