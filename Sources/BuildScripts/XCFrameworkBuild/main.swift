@@ -374,9 +374,11 @@ private class BuildMPV: BaseBuild {
 
     override func flagsDependencelibrarys() -> [Library] {
         if BaseBuild.options.enableGPL {
-            return [.gmp, .libsmbclient]
+            return [.libsmbclient]
         } else {
-            return [.gmp]
+            // mpv has no TLS of its own; it uses FFmpeg's. gmp was only here to
+            // satisfy gnutls' transitive pkg-config link flags.
+            return []
         }
     }
 
@@ -471,9 +473,11 @@ private class BuildFFMPEG: BaseBuild {
 
     override func flagsDependencelibrarys() -> [Library] {
         if BaseBuild.options.enableGPL {
-            return [.gmp, .nettle, .gnutls, .libsmbclient]
+            return [.libsmbclient]
         } else {
-            return [.gmp, .nettle, .gnutls]
+            // TLS comes from Security.framework now — see --enable-securetransport.
+            // gnutls pulled nettle/hogweed/gmp, and gmp forces version3.
+            return []
         }
     }
 
@@ -576,6 +580,10 @@ private class BuildFFMPEG: BaseBuild {
         }
         if BaseBuild.options.enableGPL {
             arguments.append("--enable-gpl")
+            // libsmbclient is in EXTERNAL_LIBRARY_GPLV3_LIST, so it requires
+            // both gpl and version3. Confined to this branch: the LGPL build
+            // has no smbclient and must stay off v3.
+            arguments.append("--enable-version3")
         }
         // arguments += Build.ffmpegConfiguers
         arguments.append("--disable-large-tests")
@@ -648,8 +656,26 @@ private class BuildFFMPEG: BaseBuild {
         "--disable-armv5te", "--disable-armv6", "--disable-armv6t2",
         "--disable-bzlib", "--disable-gray", "--disable-iconv", "--disable-linux-perf",
         "--disable-shared", "--disable-small", "--disable-symver", "--disable-xlib",
-        "--enable-cross-compile", "--enable-libxml2", "--enable-nonfree",
-        "--enable-optimizations", "--enable-pic", "--enable-runtime-cpudetect", "--enable-static", "--enable-thumb", "--enable-version3",
+        // NO --enable-nonfree: FFmpeg's configure sets
+        // license="nonfree and unredistributable" on that flag ALONE, before it
+        // looks at whether any non-free component is actually enabled (see the
+        // license if-chain in configure). Nothing here needs it — the non-free
+        // list is decklink / libfdk_aac / libtls, none of which we build.
+        //
+        // NO --enable-version3 here either; it is added below only for the GPL
+        // build, which needs it for libsmbclient (EXTERNAL_LIBRARY_GPLV3_LIST).
+        // version3 sets lgplv3/gplv3, and LGPLv3's §6 relink terms are what
+        // conflict with App Store distribution.
+        "--enable-cross-compile", "--enable-libxml2",
+        "--enable-optimizations", "--enable-pic", "--enable-runtime-cpudetect", "--enable-static", "--enable-thumb",
+        // TLS via Apple's own Security.framework instead of GnuTLS. GnuTLS drags
+        // in nettle/hogweed/gmp, and gmp is in EXTERNAL_LIBRARY_VERSION3_LIST —
+        // enabling it FORCES --enable-version3. SecureTransport is first-party,
+        // so it removes four third-party libraries and the whole v3 question.
+        // It is autodetected on Apple platforms but stated explicitly so a
+        // missing backend fails the build loudly rather than silently dropping
+        // TLS (tls_protocol_deps_any).
+        "--enable-securetransport",
         "--pkg-config-flags=--static",
         // Documentation options:
         "--disable-doc", "--disable-htmlpages", "--disable-manpages", "--disable-podpages", "--disable-txtpages",
