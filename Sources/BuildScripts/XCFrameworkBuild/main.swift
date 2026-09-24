@@ -411,9 +411,10 @@ private class BuildMPV: BaseBuild {
         } else {
             array.append("-Dlibbluray=disabled")
         }
-        if !(platform == .macos && arch.executable) {
-            array.append("-Dcplayer=false")
-        }
+        // Only libmpv is shipped. Building the mpv executable as well (as
+        // upstream does on macOS) leaves libmpv.a empty with current Meson:
+        // the objects go into the executable instead.
+        array.append("-Dcplayer=false")
         if platform == .macos {
             array.append("-Dswift-flags=-sdk \(platform.isysroot) -target \(platform.deploymentTarget(arch))")
             array.append("-Dcocoa=enabled")
@@ -497,16 +498,14 @@ private class BuildFFMPEG: BaseBuild {
 
     override func ldFlags(platform: PlatformType, arch: ArchType) -> [String] {
         var ldFlags = super.ldFlags(platform: platform, arch: arch)
+        // --enable-securetransport (every build) needs these.
+        ldFlags.append(contentsOf: ["-framework", "Security", "-framework", "CoreFoundation"])
 
-        var path = thinDir(library: .nettle, platform: platform, arch: arch)
-        if FileManager.default.fileExists(atPath: path.path) {
-            ldFlags.append("-lhogweed")
-        }
-        path = thinDir(library: .gnutls, platform: platform, arch: arch)
-        if FileManager.default.fileExists(atPath: path.path) {
-            ldFlags.append(contentsOf: ["-framework", "Security", "-framework", "CoreFoundation"])
-        }
         if BaseBuild.options.enableGPL {
+            var path = thinDir(library: .nettle, platform: platform, arch: arch)
+            if FileManager.default.fileExists(atPath: path.path) {
+                ldFlags.append("-lhogweed")
+            }
             path = thinDir(library: .libsmbclient, platform: platform, arch: arch)
             if FileManager.default.fileExists(atPath: path.path) {
                 ldFlags.append(contentsOf: ["-lresolv", "-lpthread", "-lz", "-liconv"])
@@ -616,9 +615,14 @@ private class BuildFFMPEG: BaseBuild {
         //        if platform == .isimulator || platform == .tvsimulator {
         //            arguments.append("--assert-level=1")
         //        }
-        var dependencyLibrary = [Library.gmp, .gnutls, .libfreetype, .libharfbuzz, .libfribidi, .libass, .vulkan, .libshaderc, .lcms2, .libplacebo, .libdav1d, .libuavs3d]
+        // Every library listed here is enabled whenever its build output exists
+        // under dist/ — including outputs left over from an earlier GPL build.
+        // gmp (and gnutls, which pulls it in) is in EXTERNAL_LIBRARY_VERSION3_LIST,
+        // so it must never be enabled in the LGPL build: TLS comes from
+        // --enable-securetransport there.
+        var dependencyLibrary = [Library.libfreetype, .libharfbuzz, .libfribidi, .libass, .vulkan, .libshaderc, .lcms2, .libplacebo, .libdav1d, .libuavs3d]
         if BaseBuild.options.enableGPL {
-            dependencyLibrary += [.libsmbclient]
+            dependencyLibrary += [.gmp, .gnutls, .libsmbclient]
         }
         for library in dependencyLibrary {
             let path = URL.currentDirectory + [library.rawValue, platform.rawValue, "thin", arch.rawValue]
