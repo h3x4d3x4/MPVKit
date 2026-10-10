@@ -36,6 +36,9 @@ class ArgumentOptions {
     var enableGPL: Bool = false
     var platforms : [PlatformType] = []
     var releaseVersion: String = "0.0.0"
+    /// `only=libmpv`: rebuild just that library against the outputs already in
+    /// dist/ (e.g. a libmpv-only patch without rebuilding FFmpeg).
+    var onlyLibrary: String?
 
     init() {
         self.arguments = []
@@ -60,6 +63,9 @@ class ArgumentOptions {
             case "enable-split-platform":
                 options.enableSplitPlatform = true
             default:
+                if argument.hasPrefix("only=") {
+                    options.onlyLibrary = String(argument.dropFirst("only=".count))
+                }
                 if argument.hasPrefix("version=") {
                     let version = String(argument.suffix(argument.count - "version=".count))
                     options.releaseVersion = version
@@ -136,7 +142,14 @@ class BaseBuild {
         }
     }
 
+    /// True when `only=<library>` names a different library.
+    var skippedByOnly: Bool {
+        if let only = BaseBuild.options.onlyLibrary { return only != library.rawValue }
+        return false
+    }
+
     func buildALL() throws {
+        if skippedByOnly { return }
         try beforeBuild()
         try? FileManager.default.removeItem(at: URL.currentDirectory + library.rawValue)
         try? FileManager.default.removeItem(at: directoryURL.appendingPathExtension("log"))
@@ -914,6 +927,7 @@ class ZipBaseBuild : BaseBuild {
     }
 
     override func buildALL() throws {
+        if skippedByOnly { return }
         try beforeBuild()
         try? FileManager.default.removeItem(at: URL.currentDirectory + library.rawValue)
         try? FileManager.default.removeItem(at: directoryURL.appendingPathExtension("log"))

@@ -921,6 +921,7 @@ private class BuildVulkan: ZipBaseBuild {
     }
 
     override func buildALL() throws {
+        if skippedByOnly { return }
         try super.beforeBuild()
 
         try? FileManager.default.removeItem(at: URL.currentDirectory + library.rawValue)

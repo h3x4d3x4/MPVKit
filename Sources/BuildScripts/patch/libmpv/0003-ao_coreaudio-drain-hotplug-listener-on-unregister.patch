@@ -1,0 +1,69 @@
+diff --git a/audio/out/ao_coreaudio.c b/audio/out/ao_coreaudio.c
+index 4b4bf1d..66c08f4 100644
+--- a/audio/out/ao_coreaudio.c
++++ b/audio/out/ao_coreaudio.c
+@@ -53,6 +53,10 @@ struct priv {
+     dispatch_queue_t queue;
+ 
+     int hotplug_cb_registration_times;
++    // Device listeners run on this queue, so unregistering can wait for a
++    // callback already in flight instead of letting it outlive the ao.
++    dispatch_queue_t hotplug_queue;
++    AudioObjectPropertyListenerBlock hotplug_block;
+ };
+ 
+ static int64_t ca_get_hardware_latency(struct ao *ao) {
+@@ -497,6 +501,12 @@ static bool register_hotplug_cb(struct ao *ao)
+     if (p->hotplug_cb_registration_times++)
+         return true;
+ 
++    p->hotplug_queue = dispatch_queue_create("io.mpv.coreaudio_hotplug",
++                                             DISPATCH_QUEUE_SERIAL);
++    p->hotplug_block = Block_copy(^(UInt32 naddr, const AudioObjectPropertyAddress addr[]) {
++        hotplug_cb(kAudioObjectSystemObject, naddr, addr, ao);
++    });
++
+     OSStatus err = noErr;
+     for (int i = 0; i < MP_ARRAY_SIZE(hotplug_properties); i++) {
+         AudioObjectPropertyAddress addr = {
+@@ -504,8 +514,8 @@ static bool register_hotplug_cb(struct ao *ao)
+             kAudioObjectPropertyScopeGlobal,
+             kAudioObjectPropertyElementMain
+         };
+-        err = AudioObjectAddPropertyListener(
+-            kAudioObjectSystemObject, &addr, hotplug_cb, (void *)ao);
++        err = AudioObjectAddPropertyListenerBlock(
++            kAudioObjectSystemObject, &addr, p->hotplug_queue, p->hotplug_block);
+         if (err != noErr) {
+             char *c1 = mp_tag_str(hotplug_properties[i]);
+             char *c2 = mp_tag_str(err);
+@@ -534,14 +544,27 @@ static void unregister_hotplug_cb(struct ao *ao)
+             kAudioObjectPropertyScopeGlobal,
+             kAudioObjectPropertyElementMain
+         };
+-        err = AudioObjectRemovePropertyListener(
+-            kAudioObjectSystemObject, &addr, hotplug_cb, (void *)ao);
++        err = AudioObjectRemovePropertyListenerBlock(
++            kAudioObjectSystemObject, &addr, p->hotplug_queue, p->hotplug_block);
+         if (err != noErr) {
+             char *c1 = mp_tag_str(hotplug_properties[i]);
+             char *c2 = mp_tag_str(err);
+             MP_ERR(ao, "failed to set device listener %s (%s)", c1, c2);
+         }
+     }
++
++    // AudioObjectRemovePropertyListener* does not wait for a callback that is
++    // already running. Drain the queue so none can touch this ao after uninit
++    // frees it (seen as a null-pointer crash in hotplug_cb -> mp_msg).
++    if (p->hotplug_queue) {
++        dispatch_sync(p->hotplug_queue, ^{});
++        dispatch_release(p->hotplug_queue);
++        p->hotplug_queue = NULL;
++    }
++    if (p->hotplug_block) {
++        Block_release(p->hotplug_block);
++        p->hotplug_block = NULL;
++    }
+ }
+ 
+ #define OPT_BASE_STRUCT struct priv
