@@ -1,5 +1,5 @@
 diff --git a/audio/out/ao_coreaudio.c b/audio/out/ao_coreaudio.c
-index 4b4bf1d..66c08f4 100644
+index 4b4bf1d..1c5119c 100644
 --- a/audio/out/ao_coreaudio.c
 +++ b/audio/out/ao_coreaudio.c
 @@ -53,6 +53,10 @@ struct priv {
@@ -13,7 +13,34 @@ index 4b4bf1d..66c08f4 100644
  };
  
  static int64_t ca_get_hardware_latency(struct ao *ao) {
-@@ -497,6 +501,12 @@ static bool register_hotplug_cb(struct ao *ao)
+@@ -157,6 +161,7 @@ coreaudio_error:
+ static int init(struct ao *ao)
+ {
+     struct priv *p = ao->priv;
++    bool hotplug_registered = false;
+ 
+     if (!af_fmt_is_pcm(ao->format) || (ao->init_flags & AO_INIT_EXCLUSIVE)) {
+         MP_VERBOSE(ao, "redirecting to coreaudio_exclusive\n");
+@@ -169,6 +174,7 @@ static int init(struct ao *ao)
+ 
+     if (!register_hotplug_cb(ao))
+         goto coreaudio_error;
++    hotplug_registered = true;
+ 
+     if (p->change_physical_format)
+         init_physical_format(ao);
+@@ -196,6 +202,10 @@ static int init(struct ao *ao)
+     return CONTROL_OK;
+ 
+ coreaudio_error:
++    // uninit() never runs for a failed init, but ao.c still frees the ao:
++    // the listener must not outlive it.
++    if (hotplug_registered)
++        unregister_hotplug_cb(ao);
+     return CONTROL_ERROR;
+ }
+ 
+@@ -497,6 +507,12 @@ static bool register_hotplug_cb(struct ao *ao)
      if (p->hotplug_cb_registration_times++)
          return true;
  
@@ -26,7 +53,7 @@ index 4b4bf1d..66c08f4 100644
      OSStatus err = noErr;
      for (int i = 0; i < MP_ARRAY_SIZE(hotplug_properties); i++) {
          AudioObjectPropertyAddress addr = {
-@@ -504,8 +514,8 @@ static bool register_hotplug_cb(struct ao *ao)
+@@ -504,12 +520,12 @@ static bool register_hotplug_cb(struct ao *ao)
              kAudioObjectPropertyScopeGlobal,
              kAudioObjectPropertyElementMain
          };
@@ -37,7 +64,21 @@ index 4b4bf1d..66c08f4 100644
          if (err != noErr) {
              char *c1 = mp_tag_str(hotplug_properties[i]);
              char *c2 = mp_tag_str(err);
-@@ -534,14 +544,27 @@ static void unregister_hotplug_cb(struct ao *ao)
+-            MP_ERR(ao, "failed to set device listener %s (%s)", c1, c2);
++            MP_ERR(ao, "failed to remove device listener %s (%s)", c1, c2);
+             goto coreaudio_error;
+         }
+     }
+@@ -517,6 +533,8 @@ static bool register_hotplug_cb(struct ao *ao)
+     return true;
+ 
+ coreaudio_error:
++    // Undo the listeners already added and free the queue and block.
++    unregister_hotplug_cb(ao);
+     return false;
+ }
+ 
+@@ -534,14 +552,27 @@ static void unregister_hotplug_cb(struct ao *ao)
              kAudioObjectPropertyScopeGlobal,
              kAudioObjectPropertyElementMain
          };

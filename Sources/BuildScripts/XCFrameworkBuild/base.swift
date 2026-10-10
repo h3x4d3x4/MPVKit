@@ -64,7 +64,9 @@ class ArgumentOptions {
                 options.enableSplitPlatform = true
             default:
                 if argument.hasPrefix("only=") {
-                    options.onlyLibrary = String(argument.dropFirst("only=".count))
+                    let name = String(argument.dropFirst("only=".count))
+                    guard Library(rawValue: name) != nil else { throw NSError(domain: "unknown library for only=: \(name)", code: 1) }
+                    options.onlyLibrary = name
                 }
                 if argument.hasPrefix("version=") {
                     let version = String(argument.suffix(argument.count - "version=".count))
