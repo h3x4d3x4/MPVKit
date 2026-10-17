@@ -82,8 +82,8 @@ let package = Package(
         ),
         .binaryTarget(
             name: "Libavfilter-LGPL",
-            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-lgpl2/Libavfilter.xcframework.zip",
-            checksum: "f49ab927c744ebdc2322b9d67267269ce75b1a33c6da13c8c4c3934b2756416e"
+            url: "https://github.com/h3x4d3x4/MPVKit/releases/download/0.41.0-lgpl4/Libavfilter.xcframework.zip",
+            checksum: "41c5ef53a0874245de6c831a3a40a44d9b45bc1ef66cb4e24c44a54ab4a24bde"
         ),
         .binaryTarget(
             name: "Libavutil-LGPL",
