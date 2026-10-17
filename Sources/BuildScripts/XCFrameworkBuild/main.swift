@@ -762,7 +762,7 @@ private class BuildFFMPEG: BaseBuild {
 
         // ./configure --list-filters
         "--disable-filters",
-        "--enable-filter=aformat", "--enable-filter=amix", "--enable-filter=anull", "--enable-filter=aresample",
+        "--enable-filter=aformat", "--enable-filter=amix", "--enable-filter=dynaudnorm", "--enable-filter=anull", "--enable-filter=aresample",
         "--enable-filter=areverse", "--enable-filter=asetrate", "--enable-filter=atempo", "--enable-filter=atrim",
         "--enable-filter=bwdif", "--enable-filter=delogo",
         "--enable-filter=equalizer", "--enable-filter=estdif",
